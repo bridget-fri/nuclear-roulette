@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Roulette Wheel Game</title>
+    <style>
+        canvas {
+            border: 1px solid #000;
+            display: block;
+            margin: 0 auto;
+        }
+        #spinButton {
+            margin-top: 20px;
+            font-size: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .safe {
+            color: green;
+        }
+        .danger {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="wheelCanvas" width="600" height="600"></canvas>
+    <button id="spinButton">Spin the Wheel</button>
+    <div id="message"></div>
+
+    <script>
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinButton = document.getElementById('spinButton');
+        const messageDiv = document.getElementById('message');
+
+        const wheelRadius = canvas.width / 2 - 50; // Adjusted to accommodate ball
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        const numPockets = 20; // 20 pockets, each representing 5% of the wheel
+        const pocketAngle = 2 * Math.PI / numPockets; // angle per pocket in radians
+
+        const pockets = [];
+        for (let i = 0; i < numPockets; i++) {
+            if (i === 0) {
+                pockets.push({ number: 'Nuclear War', color: 'gray', label: 'Nuclear War' });
+            } else {
+                pockets.push({
+                    number: i,
+                    color: (i % 2 === 0) ? 'red' : 'black', // Alternating colors
+                    label: 'Safe'
+                });
+            }
+        }
+
+        // Ball properties
+        let ballAngle = 0;
+        let ballSpeed = 0;
+        let ballRadius = 10;
+        let isSpinning = false;
+        let animationFrameId;
+
+        // Draw the wheel
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw outer wheel
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, wheelRadius + 40, 0, 2 * Math.PI);
+            ctx.fillStyle = '#804000'; // Brown color for the wheel edge
+            ctx.fill();
+            ctx.closePath();
+
+            // Draw pockets
+            for (let i = 0; i < numPockets; i++) {
+                const startAngle = i * pocketAngle;
+                const endAngle = startAngle + pocketAngle;
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, wheelRadius, startAngle, endAngle);
+                ctx.fillStyle = pockets[i].color;
+                ctx.fill();
+                ctx.closePath();
+
+                // Draw pocket borders
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, wheelRadius, startAngle, endAngle);
+                ctx.stroke();
+                ctx.closePath();
+
+                // Draw labels
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + pocketAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText(pockets[i].number, wheelRadius - 20, 5);
+                ctx.restore();
+            }
+
+            // Draw inner circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, wheelRadius - 110, 0, 2 * Math.PI);
+            ctx.fillStyle = '#008000'; // Green color for the inner circle
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        // Draw the ball
+        function drawBall() {
+            const ballX = centerX + (wheelRadius - 15) * Math.cos(ballAngle);
+            const ballY = centerY + (wheelRadius - 15) * Math.sin(ballAngle);
+
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = '#FFFF00'; // Yellow color for the ball
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        // Spin animation
+        function spinWheel() {
+            if (ballSpeed <= 0.01) { // Stop the ball when speed is minimal
+                cancelAnimationFrame(animationFrameId);
+                isSpinning = false;
+                determineResult();
+                return;
+            }
+
+            ballAngle += ballSpeed;
+            ballSpeed *= 0.98; // Friction slows down the ball
+
+            drawWheel();
+            drawBall();
+
+            animationFrameId = requestAnimationFrame(spinWheel);
+        }
+
+        // Determine where the ball landed
+        function determineResult() {
+            // Adjust angle to be between 0 and 2π
+            let adjustedAngle = (ballAngle + Math.PI / 2) % (2 * Math.PI);
+
+            // Find the pocket index
+            const pocketIndex = Math.floor((2 * Math.PI - adjustedAngle) / pocketAngle) % numPockets;
+            const resultPocket = pockets[pocketIndex];
+
+            if (resultPocket.label === 'Nuclear War') {
+                messageDiv.textContent = 'Nuclear War!';
+                messageDiv.className = 'danger';
+            } else {
+                messageDiv.textContent = 'Safe!';
+                messageDiv.className = 'safe';
+            }
+        }
+
+        spinButton.addEventListener('click', function() {
+            if (isSpinning) return;
+            isSpinning = true;
+            messageDiv.textContent = '';
+            messageDiv.className = '';
+
+            // Reset ball position and speed
+            ballAngle = 0;
+            ballSpeed = (Math.random() * 0.05) + 0.3; // Random initial speed
+
+            spinWheel();
+        });
+
+        // Initial draw
+        drawWheel();
+        drawBall();
+    </script>
+</body>
+</html>
